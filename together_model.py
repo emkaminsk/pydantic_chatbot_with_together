@@ -95,13 +95,14 @@ def generate_story():
         print(f"Error generating story: {e}")
         return f"Error generating story: {str(e)}"
 
-def chat_completion(prompt: str, message_history=None) -> str:
+def chat_completion(prompt: str, message_history=None, model: str = "microsoft/WizardLM-2-8x22B") -> str:
     """
     Generate a chat completion using Together AI.
     
     Args:
         prompt (str): The user's prompt
         message_history (list, optional): List of previous messages
+        model (str, optional): The model to use for completion
         
     Returns:
         str: The model's response
@@ -130,7 +131,7 @@ def chat_completion(prompt: str, message_history=None) -> str:
         
         # Create a chat completion request
         response = client.chat.completions.create(
-            model="microsoft/WizardLM-2-8x22B",  # Using the same model as generate_story
+            model=model,  # Use the provided model
             messages=messages,
             max_tokens=1000,
             temperature=0.7,

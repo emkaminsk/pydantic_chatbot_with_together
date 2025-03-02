@@ -10,6 +10,33 @@ const convElement = document.getElementById('conversation')
 const promptInput = document.getElementById('prompt-input') as HTMLTextAreaElement
 const spinner = document.getElementById('spinner')
 const resetButton = document.getElementById('reset-button')
+const modelSelector = document.getElementById('model-selector') as HTMLSelectElement
+
+let selectedModel: string = ''
+
+// Load available models when the page loads
+async function loadModels() {
+  try {
+    const response = await fetch('/models/')
+    const data = await response.json()
+    if (data.models && Array.isArray(data.models)) {
+      modelSelector.innerHTML = data.models
+        .map(model => `<option value="${model}">${model}</option>`)
+        .join('')
+      selectedModel = data.models[0] // Set the first model as default
+    }
+  } catch (error) {
+    console.error('Error loading models:', error)
+  }
+}
+
+// Update selected model when changed
+modelSelector.addEventListener('change', (e) => {
+  selectedModel = (e.target as HTMLSelectElement).value
+})
+
+// Call loadModels when the page loads
+loadModels()
 
 // Keep track of the currently edited message
 let currentEditId: string | null = null
@@ -327,26 +354,42 @@ function scrollToBottom() {
   if (convElement) {
     convElement.scrollTop = convElement.scrollHeight
   }
-  window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' })
 }
 
 function onError(error: any) {
-  console.error(error)
-  const errorElement = document.getElementById('error')
-  if (errorElement) errorElement.classList.remove('d-none')
-  if (spinner) spinner.classList.remove('active')
+  console.error('Error:', error)
+  const msgDiv = document.createElement('div')
+  msgDiv.className = 'message model'
+  msgDiv.textContent = `Error: ${error.message || error}`
+  if (convElement) {
+    convElement.appendChild(msgDiv)
+    scrollToBottom()
+  }
 }
 
 async function onSubmit(e: SubmitEvent): Promise<void> {
   e.preventDefault()
+  if (!promptInput?.value.trim()) return
+  
+  const formData = new FormData()
+  formData.append('prompt', promptInput.value)
+  formData.append('model', selectedModel) // Add selected model to form data
+  
   if (spinner) spinner.classList.add('active')
-  const body = new FormData(e.target as HTMLFormElement)
-
   promptInput.value = ''
-  promptInput.disabled = true
-
-  const response = await fetch('/chat/', {method: 'POST', body})
-  await onFetchResponse(response)
+  autoResizeTextarea(promptInput)
+  
+  try {
+    const response = await fetch('/chat/', {
+      method: 'POST',
+      body: formData
+    })
+    await onFetchResponse(response)
+  } catch (error) {
+    onError(error)
+  } finally {
+    if (spinner) spinner.classList.remove('active')
+  }
 }
 
 // Reset the chat history

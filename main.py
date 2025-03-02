@@ -136,6 +136,7 @@ def to_chat_message(m: ModelMessage) -> ChatMessage:
 @app.post('/chat/')
 async def post_chat(
     prompt: Annotated[str, fastapi.Form()],
+    model: Annotated[str, fastapi.Form()],
     edit_timestamp: Annotated[Optional[str], fastapi.Form()] = None,
     database: Database = Depends(get_db)
 ) -> StreamingResponse:
@@ -167,7 +168,7 @@ async def post_chat(
             with ThreadPoolExecutor() as executor:
                 response_text = await loop.run_in_executor(
                     executor, 
-                    partial(chat_completion, prompt, messages)
+                    partial(chat_completion, prompt, messages, model)
                 )
             
             # Create a text part with the response
@@ -212,6 +213,25 @@ async def post_chat(
             yield json.dumps(error_message).encode('utf-8') + b'\n'
 
     return StreamingResponse(stream_messages(), media_type='text/plain')
+
+
+@app.get('/models/')
+async def get_models() -> Response:
+    """Get the list of available models from models.txt."""
+    try:
+        models_file = THIS_DIR / 'models.txt'
+        with open(models_file, 'r') as f:
+            models = [line.strip() for line in f if line.strip()]
+        return Response(
+            json.dumps({"models": models}).encode('utf-8'),
+            media_type='application/json',
+        )
+    except Exception as e:
+        return Response(
+            json.dumps({"status": "error", "message": str(e)}).encode('utf-8'),
+            status_code=500,
+            media_type='application/json',
+        )
 
 
 P = ParamSpec('P')
