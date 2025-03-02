@@ -1,0 +1,7 @@
+fastapi>=0.110.0
+uvicorn>=0.27.1
+together>=0.2.11
+pydantic>=2.10.0
+pydantic-ai>=0.0.5
+python-multipart>=0.0.9
+typing-extensions>=4.10.0 
