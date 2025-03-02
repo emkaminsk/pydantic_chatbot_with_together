@@ -247,6 +247,8 @@ marked.use({ renderer })
 
 // Function to enhance AI responses with dialog highlighting
 function enhanceAIResponse(content: string): string {
+  if (!content) return ''
+  
   // Process the content with marked first
   let processedContent = marked.parse(content)
   
@@ -305,13 +307,26 @@ interface Message {
 // hence you can send data about the same message multiple times, and it will be updated
 // instead of creating a new message elements
 function addMessages(responseText: string) {
-  if (!convElement) return;
+  if (!convElement || !responseText) return;
   
   const lines = responseText.split('\n')
-  const messages: Message[] = lines.filter(line => line.length > 1).map(j => JSON.parse(j))
+  const messages: Message[] = lines
+    .filter(line => line.length > 1)
+    .map(j => {
+      try {
+        return JSON.parse(j)
+      } catch (e) {
+        console.error('Error parsing message:', e)
+        return null
+      }
+    })
+    .filter((m): m is Message => m !== null)
+
   for (const message of messages) {
     // we use the timestamp as a crude element id
     const {timestamp, role, content} = message
+    if (!timestamp || !role || !content) continue
+
     const id = `msg-${timestamp}`
     let msgDiv = document.getElementById(id)
     if (!msgDiv) {
@@ -323,7 +338,7 @@ function addMessages(responseText: string) {
       // Add click handler for user messages
       if (role === 'user') {
         msgDiv.addEventListener('click', () => {
-          if (!msgDiv.classList.contains('editing')) {
+          if (msgDiv && !msgDiv.classList.contains('editing')) {
             startEditing(msgDiv, content)
           }
         })
@@ -343,7 +358,7 @@ function addMessages(responseText: string) {
       if (role === 'model') {
         contentDiv.innerHTML = enhanceAIResponse(content)
       } else {
-        contentDiv.innerHTML = DOMPurify.sanitize(marked.parse(content))
+        contentDiv.innerHTML = content ? DOMPurify.sanitize(marked.parse(content)) : ''
       }
     }
   }
