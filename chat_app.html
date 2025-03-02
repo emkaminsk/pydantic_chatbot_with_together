@@ -20,6 +20,10 @@
       --quote-color: #e84393;
       --dialog-color: #00b894;
       --edit-hover-color: rgba(108, 92, 231, 0.1);
+      --sidebar-width: 250px;
+      --sidebar-bg: #f1f3f5;
+      --thread-hover: #e9ecef;
+      --thread-active: #dee2e6;
     }
 
     body {
@@ -29,9 +33,71 @@
     }
 
     main {
-      max-width: 800px;
+      max-width: 1200px;
+      display: flex;
+      gap: 1rem;
+      padding: 1rem;
+      height: 90vh;
+      margin: 2vh auto;
+    }
+
+    .sidebar {
+      width: var(--sidebar-width);
+      background: var(--sidebar-bg);
+      border-radius: 0.5rem;
+      padding: 1rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      overflow-y: auto;
+    }
+
+    .sidebar-header {
+      font-weight: 600;
+      color: var(--text-color);
+      padding-bottom: 0.5rem;
+      border-bottom: 1px solid var(--secondary-color);
+    }
+
+    .thread-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .thread-item {
+      padding: 0.75rem;
+      border-radius: 0.5rem;
+      cursor: pointer;
+      transition: background-color 0.2s;
+      font-size: 0.9rem;
+    }
+
+    .thread-item:hover {
+      background-color: var(--thread-hover);
+    }
+
+    .thread-item.active {
+      background-color: var(--thread-active);
+    }
+
+    .thread-title {
+      font-weight: 500;
+      margin-bottom: 0.25rem;
+    }
+
+    .thread-timestamp {
+      font-size: 0.8rem;
+      color: #6c757d;
+    }
+
+    .chat-container {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      background: white;
+      border-radius: 0.5rem;
       box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-      background-color: white;
     }
 
     .app-header {
@@ -310,43 +376,51 @@
   </style>
 </head>
 <body>
-  <main class="mx-auto my-5 rounded">
-    <div class="app-header">
-      <h1 class="app-title">Together AI Chatbot</h1>
-      <p class="app-subtitle">Powered by WizardLM-2-8x22B</p>
-      <div class="model-selector">
-        <label for="model-selector">Select Model:</label>
-        <select id="model-selector">
-          <option value="model1">Model 1</option>
-          <option value="model2">Model 2</option>
-          <option value="model3">Model 3</option>
-        </select>
+  <main>
+    <div class="sidebar">
+      <div class="sidebar-header">Conversation History</div>
+      <div class="thread-list" id="thread-list">
+        <!-- Threads will be populated here -->
       </div>
     </div>
-    
-    <div id="conversation"></div>
-    
-    <div class="d-flex justify-content-center my-3">
-      <div id="spinner"></div>
-    </div>
-    
-    <div class="input-area">
-      <form method="post">
-        <div class="input-group">
-          <textarea id="prompt-input" name="prompt" class="form-control" placeholder="Ask me anything..." autocomplete="off" rows="3"></textarea>
-          <button class="btn btn-primary btn-send" type="submit">
-            <i class="fas fa-paper-plane"></i> Send
-          </button>
+    <div class="chat-container">
+      <div class="app-header">
+        <h1 class="app-title">Together AI Chatbot</h1>
+        <p class="app-subtitle">Powered by WizardLM-2-8x22B</p>
+        <div class="model-selector">
+          <label for="model-selector">Select Model:</label>
+          <select id="model-selector">
+            <option value="model1">Model 1</option>
+            <option value="model2">Model 2</option>
+            <option value="model3">Model 3</option>
+          </select>
         </div>
-        <div class="actions-container">
-          <button id="reset-button" type="button" class="btn btn-danger btn-reset">
-            <i class="fas fa-trash"></i> Reset Chat
-          </button>
-          <div id="error" class="d-none text-danger">
-            Error occurred, check the browser developer console for more information.
+      </div>
+      
+      <div id="conversation"></div>
+      
+      <div class="d-flex justify-content-center my-3">
+        <div id="spinner"></div>
+      </div>
+      
+      <div class="input-area">
+        <form method="post">
+          <div class="input-group">
+            <textarea id="prompt-input" name="prompt" class="form-control" placeholder="Ask me anything..." autocomplete="off" rows="3"></textarea>
+            <button class="btn btn-primary btn-send" type="submit">
+              <i class="fas fa-paper-plane"></i> Send
+            </button>
           </div>
-        </div>
-      </form>
+          <div class="actions-container">
+            <button id="reset-button" type="button" class="btn btn-danger btn-reset">
+              <i class="fas fa-trash"></i> Reset Chat
+            </button>
+            <div id="error" class="d-none text-danger">
+              Error occurred, check the browser developer console for more information.
+            </div>
+          </div>
+        </form>
+      </div>
     </div>
   </main>
 </body>

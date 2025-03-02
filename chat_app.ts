@@ -11,8 +11,10 @@ const promptInput = document.getElementById('prompt-input') as HTMLTextAreaEleme
 const spinner = document.getElementById('spinner')
 const resetButton = document.getElementById('reset-button')
 const modelSelector = document.getElementById('model-selector') as HTMLSelectElement
+const threadList = document.getElementById('thread-list')
 
 let selectedModel: string = ''
+let currentThreadId: number | null = null
 
 // Load available models when the page loads
 async function loadModels() {
@@ -407,25 +409,82 @@ async function onSubmit(e: SubmitEvent): Promise<void> {
   }
 }
 
-// Reset the chat history
+// Load conversation threads
+async function loadThreads() {
+  try {
+    const response = await fetch('/threads/')
+    const data = await response.json()
+    if (data.threads && Array.isArray(data.threads)) {
+      renderThreads(data.threads)
+    }
+  } catch (error) {
+    console.error('Error loading threads:', error)
+  }
+}
+
+// Render threads in the sidebar
+function renderThreads(threads: Array<{id: number, title: string, timestamp: string}>) {
+  if (!threadList) return
+  
+  threadList.innerHTML = ''
+  for (const thread of threads) {
+    const threadDiv = document.createElement('div')
+    threadDiv.className = 'thread-item'
+    if (thread.id === currentThreadId) {
+      threadDiv.classList.add('active')
+    }
+    
+    const title = document.createElement('div')
+    title.className = 'thread-title'
+    title.textContent = thread.title
+    
+    const timestamp = document.createElement('div')
+    timestamp.className = 'thread-timestamp'
+    timestamp.textContent = new Date(thread.timestamp).toLocaleString()
+    
+    threadDiv.appendChild(title)
+    threadDiv.appendChild(timestamp)
+    
+    threadDiv.addEventListener('click', () => loadThread(thread.id))
+    threadList.appendChild(threadDiv)
+  }
+}
+
+// Load a specific thread
+async function loadThread(threadId: number) {
+  if (spinner) spinner.classList.add('active')
+  currentThreadId = threadId
+  
+  try {
+    if (convElement) convElement.innerHTML = ''
+    const response = await fetch(`/chat/?thread_id=${threadId}`)
+    await onFetchResponse(response)
+    loadThreads() // Refresh thread list to update active state
+  } catch (error) {
+    console.error('Error loading thread:', error)
+    onError(error)
+  } finally {
+    if (spinner) spinner.classList.remove('active')
+  }
+}
+
+// Modify resetChat to also refresh threads
 async function resetChat() {
-  // Show confirmation dialog
   if (confirm('Are you sure you want to reset the chat? This will clear all messages.')) {
     if (spinner) spinner.classList.add('active')
     
     try {
-      // Clear the conversation UI
       if (convElement) convElement.innerHTML = ''
       
-      // Make a request to reset the chat on the server
       const response = await fetch('/reset-chat/', {method: 'POST'})
       
       if (!response.ok) {
-        // If the server doesn't support reset, just clear the UI
         console.warn('Server does not support chat reset. UI has been cleared, but history may persist on server.')
       }
       
-      // Add a welcome message
+      currentThreadId = null
+      await loadThreads() // Refresh thread list
+      
       const welcomeMessage = {
         role: 'model',
         content: 'Chat has been reset. How can I help you today?',
@@ -435,7 +494,6 @@ async function resetChat() {
       addMessages(JSON.stringify([welcomeMessage]))
     } catch (error) {
       console.error('Error resetting chat:', error)
-      // Still clear the UI even if server request fails
       const errorMessage = {
         role: 'model',
         content: 'Chat UI has been reset, but there was an error communicating with the server. Some history may persist.',
@@ -461,3 +519,6 @@ if (resetButton) {
 
 // load messages on page load
 fetch('/chat/').then(onFetchResponse).catch(onError)
+
+// Load threads when the page loads
+loadThreads()

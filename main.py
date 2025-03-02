@@ -234,6 +234,16 @@ async def get_models() -> Response:
         )
 
 
+@app.get('/threads/')
+async def get_threads(database: Database = Depends(get_db)) -> Response:
+    """Get list of conversation threads."""
+    threads = await database.get_threads()
+    return Response(
+        json.dumps({"threads": threads}).encode('utf-8'),
+        media_type='application/json',
+    )
+
+
 P = ParamSpec('P')
 R = TypeVar('R')
 
@@ -365,6 +375,33 @@ class Database:
             partial(func, **kwargs),
             *args,  # type: ignore
         )
+
+    async def get_threads(self) -> List[Dict[str, Any]]:
+        """Get list of conversation threads with their first messages."""
+        c = await self._asyncify(
+            self._execute, 'SELECT id, message_list FROM messages ORDER BY id DESC'
+        )
+        rows = await self._asyncify(c.fetchall)
+        
+        threads = []
+        for row in rows:
+            try:
+                thread_id = row[0]
+                msg_list = json.loads(row[0])
+                if isinstance(msg_list, list) and len(msg_list) > 0:
+                    first_msg = msg_list[0]
+                    if isinstance(first_msg, dict) and 'content' in first_msg:
+                        # Use first few words of first message as thread title
+                        title = ' '.join(first_msg['content'].split()[:5]) + '...'
+                        threads.append({
+                            "id": thread_id,
+                            "title": title,
+                            "timestamp": first_msg.get('timestamp', '')
+                        })
+            except (json.JSONDecodeError, IndexError, KeyError) as e:
+                print(f"Error parsing thread: {e}")
+        
+        return threads
 
 
 if __name__ == '__main__':
