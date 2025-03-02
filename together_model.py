@@ -1,6 +1,7 @@
 import os
 import json
 from typing import Dict, List, Optional, Any, Union
+from pathlib import Path
 
 from together import Together
 
@@ -11,6 +12,19 @@ if not api_key:
 
 # Initialize the Together client
 client = Together(api_key=api_key)
+
+# Get the directory where the script is located
+THIS_DIR = Path(__file__).parent
+
+def load_system_prompt() -> str:
+    """Load the system prompt from the system_prompt.txt file."""
+    try:
+        system_prompt_path = THIS_DIR / 'system_prompt.txt'
+        with open(system_prompt_path, 'r', encoding='utf-8') as f:
+            return f.read().strip()
+    except FileNotFoundError:
+        # Return a default system prompt if the file doesn't exist
+        return "You are a chatbot. You must strictly follow the game rules that are provided in the first user prompt. Always answer in the language of the prompt. If no specific game rules or language requirements are provided in the first prompt, maintain a helpful and respectful conversation in the language of the current prompt."
 
 def extract_content_from_response(response):
     """
@@ -98,7 +112,7 @@ def chat_completion(prompt: str, message_history=None) -> str:
         # Add system prompt
         system_prompt = {
             "role": "system",
-            "content": "You are a chatbot. You must strictly follow the game rules that are provided in the first user prompt. Always answer in the language of the prompt. If no specific game rules or language requirements are provided in the first prompt, maintain a helpful and respectful conversation in the language of the current prompt."
+            "content": load_system_prompt()
         }
         messages.append(system_prompt)
         

@@ -64,6 +64,11 @@ async def index() -> FileResponse:
     return FileResponse((THIS_DIR / 'chat_app.html'), media_type='text/html')
 
 
+@app.get('/favicon.ico')
+async def favicon() -> FileResponse:
+    return FileResponse((THIS_DIR / 'favicon.ico'), media_type='image/x-icon')
+
+
 @app.get('/chat_app.ts')
 async def main_ts() -> FileResponse:
     """Get the raw typescript code, it's compiled in the browser, forgive me."""
