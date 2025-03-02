@@ -11,7 +11,7 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from functools import partial
 from pathlib import Path
-from typing import Annotated, Any, Callable, Dict, Literal, TypeVar, List
+from typing import Annotated, Any, Callable, Dict, Literal, TypeVar, List, Optional
 
 # Check for required packages and provide helpful error messages
 try:
@@ -130,21 +130,25 @@ def to_chat_message(m: ModelMessage) -> ChatMessage:
 
 @app.post('/chat/')
 async def post_chat(
-    prompt: Annotated[str, fastapi.Form()], database: Database = Depends(get_db)
+    prompt: Annotated[str, fastapi.Form()],
+    edit_timestamp: Annotated[Optional[str], fastapi.Form()] = None,
+    database: Database = Depends(get_db)
 ) -> StreamingResponse:
     async def stream_messages():
         """Streams new line delimited JSON `Message`s to the client."""
-        # Stream the user prompt so that can be displayed straight away
         timestamp = datetime.now(tz=timezone.utc)
-        user_message = {
-            'role': 'user',
-            'timestamp': timestamp.isoformat(),
-            'content': prompt,
-        }
-        yield json.dumps(user_message).encode('utf-8') + b'\n'
         
-        # Get the chat history so far to pass as context to the model
-        messages = await database.get_chat_history()
+        # Only stream the user prompt if this is not an edit
+        if not edit_timestamp:
+            user_message = {
+                'role': 'user',
+                'timestamp': timestamp.isoformat(),
+                'content': prompt,
+            }
+            yield json.dumps(user_message).encode('utf-8') + b'\n'
+        
+        # Get the chat history up to the edited message if edit_timestamp is provided
+        messages = await database.get_chat_history(edit_timestamp)
         
         # Create a user prompt part with the current prompt
         user_prompt_part = UserPromptPart(content=prompt, timestamp=timestamp)
@@ -254,7 +258,7 @@ class Database:
         )
         await self._asyncify(self.con.commit)
 
-    async def get_chat_history(self) -> List[Dict[str, Any]]:
+    async def get_chat_history(self, edit_timestamp: Optional[str] = None) -> List[Dict[str, Any]]:
         """Get chat history in a format suitable for the Together API."""
         c = await self._asyncify(
             self._execute, 'SELECT message_list FROM messages ORDER BY id'
@@ -268,6 +272,9 @@ class Database:
                 for msg in msg_list:
                     if isinstance(msg, dict) and 'role' in msg and 'content' in msg:
                         messages.append(msg)
+                        # If we reach the edited message, stop including further messages
+                        if edit_timestamp and msg.get('timestamp') == edit_timestamp:
+                            break
             except (json.JSONDecodeError, IndexError, KeyError) as e:
                 print(f"Error parsing message: {e}")
         

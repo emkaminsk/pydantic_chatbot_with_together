@@ -95,6 +95,13 @@ def chat_completion(prompt: str, message_history=None) -> str:
     try:
         messages = []
         
+        # Add system prompt
+        system_prompt = {
+            "role": "system",
+            "content": "You are a chatbot. You must strictly follow the game rules that are provided in the first user prompt. Always answer in the language of the prompt. If no specific game rules or language requirements are provided in the first prompt, maintain a helpful and respectful conversation in the language of the current prompt."
+        }
+        messages.append(system_prompt)
+        
         # Add message history if provided
         if message_history:
             for msg in message_history:

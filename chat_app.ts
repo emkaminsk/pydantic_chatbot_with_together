@@ -11,6 +11,9 @@ const promptInput = document.getElementById('prompt-input') as HTMLTextAreaEleme
 const spinner = document.getElementById('spinner')
 const resetButton = document.getElementById('reset-button')
 
+// Keep track of the currently edited message
+let currentEditId: string | null = null
+
 // Function to auto-resize textarea
 function autoResizeTextarea(textarea: HTMLTextAreaElement) {
   // Reset height to allow shrinking
@@ -18,6 +21,151 @@ function autoResizeTextarea(textarea: HTMLTextAreaElement) {
   // Set new height based on scroll height
   const newHeight = Math.min(textarea.scrollHeight, 200) // Max height of 200px
   textarea.style.height = `${newHeight}px`
+}
+
+// Function to create edit form for a message
+function createEditForm(content: string): HTMLFormElement {
+  const form = document.createElement('form')
+  form.className = 'edit-form'
+  
+  const textarea = document.createElement('textarea')
+  textarea.className = 'edit-textarea'
+  textarea.value = content
+  
+  const actions = document.createElement('div')
+  actions.className = 'edit-actions'
+  
+  const saveButton = document.createElement('button')
+  saveButton.className = 'btn-save-edit'
+  saveButton.textContent = 'Save'
+  saveButton.type = 'submit'
+  
+  const cancelButton = document.createElement('button')
+  cancelButton.className = 'btn-cancel-edit'
+  cancelButton.textContent = 'Cancel'
+  cancelButton.type = 'button'
+  
+  actions.appendChild(cancelButton)
+  actions.appendChild(saveButton)
+  form.appendChild(textarea)
+  form.appendChild(actions)
+  
+  return form
+}
+
+// Function to handle message editing
+function startEditing(msgDiv: HTMLElement, content: string) {
+  if (currentEditId) {
+    // Cancel any existing edit
+    cancelEditing()
+  }
+  
+  currentEditId = msgDiv.id
+  msgDiv.classList.add('editing')
+  
+  // Create and add edit form
+  const editForm = createEditForm(content)
+  msgDiv.appendChild(editForm)
+  
+  // Focus the textarea
+  const textarea = editForm.querySelector('textarea')
+  if (textarea) {
+    textarea.focus()
+    autoResizeTextarea(textarea)
+    textarea.addEventListener('input', () => autoResizeTextarea(textarea))
+  }
+  
+  // Handle cancel button
+  const cancelButton = editForm.querySelector('.btn-cancel-edit')
+  if (cancelButton) {
+    cancelButton.addEventListener('click', () => cancelEditing())
+  }
+  
+  // Handle form submission
+  editForm.addEventListener('submit', async (e) => {
+    e.preventDefault()
+    const textarea = editForm.querySelector('textarea')
+    if (textarea) {
+      await submitEdit(msgDiv, textarea.value)
+    }
+  })
+  
+  // Fade out subsequent messages
+  let nextElement = msgDiv.nextElementSibling
+  while (nextElement) {
+    nextElement.classList.add('faded')
+    nextElement = nextElement.nextElementSibling
+  }
+}
+
+// Function to cancel editing
+function cancelEditing() {
+  if (currentEditId) {
+    const msgDiv = document.getElementById(currentEditId)
+    if (msgDiv) {
+      msgDiv.classList.remove('editing')
+      const editForm = msgDiv.querySelector('.edit-form')
+      if (editForm) {
+        editForm.remove()
+      }
+      
+      // Remove faded class from subsequent messages
+      let nextElement = msgDiv.nextElementSibling
+      while (nextElement) {
+        nextElement.classList.remove('faded')
+        nextElement = nextElement.nextElementSibling
+      }
+    }
+    currentEditId = null
+  }
+}
+
+// Function to submit edited message
+async function submitEdit(msgDiv: HTMLElement, newContent: string) {
+  if (spinner) spinner.classList.add('active')
+  
+  try {
+    // Remove subsequent messages from the UI
+    let nextElement = msgDiv.nextElementSibling
+    while (nextElement) {
+      const temp = nextElement.nextElementSibling
+      nextElement.remove()
+      nextElement = temp
+    }
+    
+    // Create form data for the edit
+    const formData = new FormData()
+    formData.append('prompt', newContent)
+    formData.append('edit_timestamp', msgDiv.id.replace('msg-', ''))
+    
+    // Send the edited message
+    const response = await fetch('/chat/', {
+      method: 'POST',
+      body: formData
+    })
+    
+    await onFetchResponse(response)
+    
+    // Clean up editing state
+    msgDiv.classList.remove('editing')
+    const editForm = msgDiv.querySelector('.edit-form')
+    if (editForm) {
+      editForm.remove()
+    }
+    
+    // Update the message content
+    const contentDiv = msgDiv.querySelector('.message-content')
+    if (contentDiv) {
+      contentDiv.innerHTML = DOMPurify.sanitize(marked.parse(newContent))
+    }
+    
+    currentEditId = null
+  } catch (error) {
+    console.error('Error submitting edit:', error)
+    onError(error)
+  } finally {
+    if (spinner) spinner.classList.remove('active')
+  }
 }
 
 // Add input event listener for auto-resizing
@@ -144,14 +292,32 @@ function addMessages(responseText: string) {
       msgDiv.id = id
       msgDiv.title = `${role} at ${timestamp}`
       msgDiv.classList.add('message', role)
+      
+      // Add click handler for user messages
+      if (role === 'user') {
+        msgDiv.addEventListener('click', () => {
+          if (!msgDiv.classList.contains('editing')) {
+            startEditing(msgDiv, content)
+          }
+        })
+      }
+      
+      // Create content div
+      const contentDiv = document.createElement('div')
+      contentDiv.className = 'message-content'
+      msgDiv.appendChild(contentDiv)
+      
       convElement.appendChild(msgDiv)
     }
     
-    // Apply enhanced formatting for AI responses
-    if (role === 'model') {
-      msgDiv.innerHTML = enhanceAIResponse(content)
-    } else {
-      msgDiv.innerHTML = DOMPurify.sanitize(marked.parse(content))
+    // Update content
+    const contentDiv = msgDiv.querySelector('.message-content')
+    if (contentDiv) {
+      if (role === 'model') {
+        contentDiv.innerHTML = enhanceAIResponse(content)
+      } else {
+        contentDiv.innerHTML = DOMPurify.sanitize(marked.parse(content))
+      }
     }
   }
   scrollToBottom()
