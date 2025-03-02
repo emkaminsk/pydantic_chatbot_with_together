@@ -1,2 +1,3 @@
 microsoft/WizardLM-2-8x22B
 meta-llama/Llama-3.3-70B-Instruct-Turbo-Free
+deepseek-ai/DeepSeek-R1-Distill-Llama-70B-free

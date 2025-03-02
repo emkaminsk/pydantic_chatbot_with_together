@@ -94,19 +94,11 @@ async def get_chat(
 
 @app.post('/reset-chat/')
 async def reset_chat(database: Database = Depends(get_db)) -> Response:
-    """Reset the chat history by clearing all messages from the database."""
-    try:
-        await database.clear_messages()
-        return Response(
-            json.dumps({"status": "success", "message": "Chat history cleared"}).encode('utf-8'),
-            media_type='application/json',
-        )
-    except Exception as e:
-        return Response(
-            json.dumps({"status": "error", "message": str(e)}).encode('utf-8'),
-            status_code=500,
-            media_type='application/json',
-        )
+    """Reset the chat by starting a new conversation without clearing history."""
+    return Response(
+        json.dumps({"status": "success", "message": "Chat reset - starting new conversation"}).encode('utf-8'),
+        media_type='application/json',
+    )
 
 
 class ChatMessage(TypedDict):

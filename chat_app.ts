@@ -471,7 +471,7 @@ async function loadThread(threadId: number) {
 
 // Modify resetChat to also refresh threads
 async function resetChat() {
-  if (confirm('Are you sure you want to reset the chat? This will clear all messages.')) {
+  if (confirm('Are you sure you want to reset the chat? This will start a new conversation.')) {
     if (spinner) spinner.classList.add('active')
     
     try {
