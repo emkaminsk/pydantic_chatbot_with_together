@@ -160,11 +160,12 @@ async def post_chat(
         # Get the chat history up to the edited message if edit_timestamp is provided
         messages = await database.get_chat_history(edit_timestamp)
         
-        # Create a user prompt part with the current prompt
-        user_prompt_part = UserPromptPart(content=prompt, timestamp=timestamp)
-        
-        # Create a ModelRequest for the user prompt
-        user_request = ModelRequest(parts=[user_prompt_part])
+        # If this is an edit, update the last message's content
+        if edit_timestamp and messages:
+            for i, msg in enumerate(messages):
+                if msg.get('timestamp') == edit_timestamp:
+                    messages[i]['content'] = prompt
+                    break
         
         try:
             # Get response from Together AI model

@@ -166,6 +166,7 @@ async function submitEdit(msgDiv: HTMLElement, newContent: string) {
     const formData = new FormData()
     formData.append('prompt', newContent)
     formData.append('edit_timestamp', msgDiv.id.replace('msg-', ''))
+    formData.append('model', selectedModel) // Add selected model to form data
     
     // Send the edited message
     const response = await fetch('/chat/', {
