@@ -135,12 +135,18 @@
       box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
       border: 1px solid #ced4da;
       padding: 0.75rem 1.25rem;
+      min-height: calc(1.5em * 3);
+      max-height: 200px;
+      resize: none;
+      overflow-y: hidden;
+      line-height: 1.5;
+      transition: height 0.1s ease-in-out;
     }
 
     .btn-send {
       position: absolute;
       right: 0.5rem;
-      top: 0.25rem;
+      bottom: 0.5rem;
       z-index: 10;
       border-radius: 1.5rem;
       padding: 0.5rem 1.25rem;
@@ -209,7 +215,7 @@
     <div class="input-area">
       <form method="post">
         <div class="input-group">
-          <input id="prompt-input" name="prompt" class="form-control" placeholder="Ask me anything..." autocomplete="off"/>
+          <textarea id="prompt-input" name="prompt" class="form-control" placeholder="Ask me anything..." autocomplete="off" rows="3"></textarea>
           <button class="btn btn-primary btn-send" type="submit">
             <i class="fas fa-paper-plane"></i> Send
           </button>

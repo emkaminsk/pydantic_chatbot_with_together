@@ -7,9 +7,44 @@ import { marked } from 'https://cdnjs.cloudflare.com/ajax/libs/marked/15.0.0/lib
 import DOMPurify from 'https://cdn.jsdelivr.net/npm/dompurify@3.0.6/dist/purify.es.min.js'
 
 const convElement = document.getElementById('conversation')
-const promptInput = document.getElementById('prompt-input') as HTMLInputElement
+const promptInput = document.getElementById('prompt-input') as HTMLTextAreaElement
 const spinner = document.getElementById('spinner')
 const resetButton = document.getElementById('reset-button')
+
+// Function to auto-resize textarea
+function autoResizeTextarea(textarea: HTMLTextAreaElement) {
+  // Reset height to allow shrinking
+  textarea.style.height = 'auto'
+  // Set new height based on scroll height
+  const newHeight = Math.min(textarea.scrollHeight, 200) // Max height of 200px
+  textarea.style.height = `${newHeight}px`
+}
+
+// Add input event listener for auto-resizing
+if (promptInput) {
+  // Initial resize
+  autoResizeTextarea(promptInput)
+  
+  // Listen for input events
+  promptInput.addEventListener('input', () => {
+    autoResizeTextarea(promptInput)
+  })
+  
+  // Handle Enter key for submission (Shift+Enter for new line)
+  promptInput.addEventListener('keydown', (e: KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault()
+      const form = promptInput.closest('form')
+      if (form) {
+        const submitEvent = new SubmitEvent('submit', {
+          bubbles: true,
+          cancelable: true
+        })
+        form.dispatchEvent(submitEvent)
+      }
+    }
+  })
+}
 
 // Configure marked for better rendering
 marked.setOptions({
