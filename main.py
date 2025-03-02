@@ -80,8 +80,12 @@ async def get_db(request: Request) -> Database:
 
 
 @app.get('/chat/')
-async def get_chat(database: Database = Depends(get_db)) -> Response:
-    msgs = await database.get_messages()
+async def get_chat(
+    thread_id: Optional[int] = None,
+    database: Database = Depends(get_db)
+) -> Response:
+    """Get chat messages, optionally filtered by thread_id."""
+    msgs = await database.get_messages(thread_id)
     return Response(
         b'\n'.join(json.dumps(to_chat_message(m)).encode('utf-8') for m in msgs),
         media_type='text/plain',
@@ -315,11 +319,16 @@ class Database:
         
         return messages
 
-    async def get_messages(self) -> list[ModelMessage]:
+    async def get_messages(self, thread_id: Optional[int] = None) -> list[ModelMessage]:
         """Get messages in a format suitable for the frontend."""
-        c = await self._asyncify(
-            self._execute, 'SELECT message_list FROM messages ORDER BY id'
-        )
+        if thread_id is not None:
+            c = await self._asyncify(
+                self._execute, 'SELECT message_list FROM messages WHERE id = ?', thread_id
+            )
+        else:
+            c = await self._asyncify(
+                self._execute, 'SELECT message_list FROM messages ORDER BY id'
+            )
         rows = await self._asyncify(c.fetchall)
         
         all_messages = []
@@ -387,7 +396,7 @@ class Database:
         for row in rows:
             try:
                 thread_id = row[0]
-                msg_list = json.loads(row[0])
+                msg_list = json.loads(row[1])  # Use row[1] for message_list column
                 if isinstance(msg_list, list) and len(msg_list) > 0:
                     first_msg = msg_list[0]
                     if isinstance(first_msg, dict) and 'content' in first_msg:
